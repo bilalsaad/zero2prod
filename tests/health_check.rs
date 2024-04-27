@@ -47,7 +47,7 @@ async fn subscribe_returns_a_400_for_missing_data() {
     let test_cases = vec![
         ("name=x", "missing email"),
         ("email=y@y.com", "missing the name"),
-        ("", "missing both")
+        ("", "missing both"),
     ];
 
     for (invalid_body, error_message) in test_cases {
@@ -61,9 +61,13 @@ async fn subscribe_returns_a_400_for_missing_data() {
             .expect("Failed to execute request.");
 
         // Assert
-        assert_eq!(response.status().as_u16(), 400,
+        assert_eq!(
+            response.status().as_u16(),
+            400,
             "The API did not fail with 400 Bad Request when the payload was {} {}",
-            invalid_body, error_message);
+            invalid_body,
+            error_message
+        );
     }
 }
 
@@ -71,7 +75,7 @@ async fn subscribe_returns_a_400_for_missing_data() {
 fn spawn_app() -> String {
     let listener = TcpListener::bind("127.0.0.1:0").expect("Failed to bind to random port");
     let port = listener.local_addr().unwrap().port();
-    let server = zero2prod2::run(listener).expect("failed to bind address");
+    let server = zero2prod2::startup::run(listener).expect("failed to bind address");
     let _ = tokio::spawn(server);
     format!("http://127.0.01:{}", port)
 }
