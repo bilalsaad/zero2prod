@@ -1,1 +1,6 @@
 /target
+/src/*.swp
+*.swp
+stderr.log
+secrets/*
+.env
