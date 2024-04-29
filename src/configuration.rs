@@ -17,7 +17,7 @@ pub struct DatabaseSettings {
 
 impl DatabaseSettings {
     /// Creates a postgres connection String
-    /// TODO: add a doctest/example
+    ///
     /// Example:
     /// ```rust
     ///  use zero2prod2::configuration::DatabaseSettings;
@@ -37,6 +37,14 @@ impl DatabaseSettings {
         format!(
             "postgres://{}:{}@{}:{}/{}",
             self.username, self.password, self.host, self.port, self.database_name
+        )
+    }
+
+    /// Creates a db connection string but omits the database name.
+    pub fn connection_string_without_db(&self) -> String {
+        format!(
+            "postgres://{}:{}@{}:{}",
+            self.username, self.password, self.host, self.port
         )
     }
 }
