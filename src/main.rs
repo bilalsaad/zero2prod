@@ -1,18 +1,26 @@
-use std::net::TcpListener;
-
+use secrecy::ExposeSecret;
 use sqlx::PgPool;
+use std::net::TcpListener;
+use zero2prod2::telemetry::{get_subscriber, init_subscriber};
 use zero2prod2::{configuration::get_configuration, startup::run};
 
 #[tokio::main]
 async fn main() -> Result<(), std::io::Error> {
+    // Setup tracing and logging.
+    let subscriber = get_subscriber("zero2prod2".into(), "info".into(), std::io::stdout);
+    init_subscriber(subscriber);
+
+    //-------------- Setup database
+
     let configuration = get_configuration().expect("Failed to read configuration.");
-    let connection_string = configuration.database.connection_string();
-    let connection = PgPool::connect(&connection_string)
+    let connection = PgPool::connect(&configuration.database.connection_string().expose_secret())
         .await
         .expect("failed to connect to postgres");
 
+    //-------------- Setup TCPListener
     let address = format!("127.0.0.1:{}", configuration.application_port);
-
     let listener = TcpListener::bind(address).expect("Failed to bind to port 8000");
+
+    // Finally run server
     run(listener, connection)?.await
 }

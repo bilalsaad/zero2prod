@@ -1,4 +1,5 @@
 // Configurations
+use secrecy::{ExposeSecret, Secret};
 
 #[derive(serde::Deserialize)]
 pub struct Settings {
@@ -9,7 +10,7 @@ pub struct Settings {
 #[derive(serde::Deserialize)]
 pub struct DatabaseSettings {
     pub username: String,
-    pub password: String,
+    pub password: Secret<String>,
     pub port: u16,
     pub host: String,
     pub database_name: String,
@@ -21,31 +22,39 @@ impl DatabaseSettings {
     /// Example:
     /// ```rust
     ///  use zero2prod2::configuration::DatabaseSettings;
+    ///  use secrecy::{Secret, ExposeSecret};
     ///
     ///  let settings = DatabaseSettings {
     ///    username: "user1".into(),
-    ///    password: "pwd".into(),
+    ///    password: Secret::new("pwd".to_string()),
     ///    port: 5432,
     ///    host: "localhost".into(),
     ///    database_name: "db".into(),
     ///   };
     ///
-    ///  assert_eq!(settings.connection_string(),
+    ///  assert_eq!(*settings.connection_string().expose_secret(),
     ///            format!("postgres://user1:pwd@localhost:5432/db"));
     /// ```
-    pub fn connection_string(&self) -> String {
-        format!(
+    pub fn connection_string(&self) -> Secret<String> {
+        Secret::new(format!(
             "postgres://{}:{}@{}:{}/{}",
-            self.username, self.password, self.host, self.port, self.database_name
-        )
+            self.username,
+            self.password.expose_secret(),
+            self.host,
+            self.port,
+            self.database_name
+        ))
     }
 
     /// Creates a db connection string but omits the database name.
-    pub fn connection_string_without_db(&self) -> String {
-        format!(
+    pub fn connection_string_without_db(&self) -> Secret<String> {
+        Secret::new(format!(
             "postgres://{}:{}@{}:{}",
-            self.username, self.password, self.host, self.port
-        )
+            self.username,
+            self.password.expose_secret(),
+            self.host,
+            self.port
+        ))
     }
 }
 

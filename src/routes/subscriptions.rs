@@ -14,8 +14,25 @@ pub struct FormData {
 /// Subscribes a user to the newsletter
 ///  - Preconditions
 ///     * email and name set.
+#[tracing::instrument(
+    name = "Adding a new subscriber",
+    skip(form, db_pool),
+    fields(request_id = %Uuid::new_v4(),
+    subscriber_email = %form.email,
+    subscriber_name = %form.name
+    )
+)]
+
 pub async fn subscribe(form: web::Form<FormData>, db_pool: web::Data<PgPool>) -> HttpResponse {
-    match sqlx::query!(
+    match insert_subscriber(&form, &db_pool).await {
+        Ok(_) => HttpResponse::Ok().finish(),
+        Err(_) => HttpResponse::InternalServerError().finish(),
+    }
+}
+
+#[tracing::instrument(name = "Saving new subscriber to database.", skip(form, pool))]
+async fn insert_subscriber(form: &FormData, pool: &PgPool) -> Result<(), sqlx::Error> {
+    sqlx::query!(
         r#"
        INSERT INTO subscriptions (id, email, name, subscribed_at)
        VALUES($1, $2, $3, $4)
@@ -25,13 +42,11 @@ pub async fn subscribe(form: web::Form<FormData>, db_pool: web::Data<PgPool>) ->
         form.name,
         Utc::now()
     )
-    .execute(db_pool.get_ref())
+    .execute(pool)
     .await
-    {
-        Ok(_) => HttpResponse::Ok().finish(),
-        Err(e) => {
-            println!("failed to exec query: {}", e);
-            HttpResponse::InternalServerError().finish()
-        }
-    }
+    .map_err(|e| {
+        tracing::error!("failed to exec query: {:?}", e);
+        e
+    })?;
+    Ok(())
 }
