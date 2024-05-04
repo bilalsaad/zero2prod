@@ -56,7 +56,8 @@ impl DatabaseSettings {
     ///            
     /// ```
     pub fn with_db(&self) -> PgConnectOptions {
-        self.without_db().database(&self.database_name)
+        self.without_db()
+            .database(&self.database_name)
             .log_statements(tracing_log::log::LevelFilter::Trace)
     }
 
@@ -64,7 +65,7 @@ impl DatabaseSettings {
     pub fn without_db(&self) -> PgConnectOptions {
         let ssl_mode = match self.require_ssl {
             true => PgSslMode::Require,
-            false => PgSslMode::Prefer
+            false => PgSslMode::Prefer,
         };
         PgConnectOptions::new()
             .host(&self.host)
