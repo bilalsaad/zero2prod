@@ -1,5 +1,4 @@
 use once_cell::sync::Lazy;
-use secrecy::ExposeSecret;
 use sqlx::{Connection, Executor, PgConnection, PgPool};
 use std::net::TcpListener;
 use uuid::Uuid;
@@ -42,13 +41,13 @@ pub async fn spawn_app() -> TestApp {
         configuration
     };
 
+    // Configure DB pool connection.
     let db_pool = {
         let config = &configuration.database;
         // Create the database
-        let mut connection =
-            PgConnection::connect(&config.connection_string_without_db().expose_secret())
-                .await
-                .expect("failed to connect to postgres");
+        let mut connection = PgConnection::connect_with(&config.without_db())
+            .await
+            .expect("failed to connect to postgres");
 
         connection
             .execute(format!(r#"CREATE DATABASE "{}";"#, config.database_name).as_str())
@@ -56,7 +55,7 @@ pub async fn spawn_app() -> TestApp {
             .expect("Failed to create ephemeral database.");
 
         // migrate the database
-        let connection_pool = PgPool::connect(&config.connection_string().expose_secret())
+        let connection_pool = PgPool::connect_with(config.with_db())
             .await
             .expect("Failed to connect to postgres after creating ephemeral db");
         sqlx::migrate!("./migrations")

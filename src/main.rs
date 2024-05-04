@@ -1,4 +1,5 @@
 use secrecy::ExposeSecret;
+use sqlx::postgres::PgPoolOptions;
 use sqlx::PgPool;
 use std::net::TcpListener;
 use zero2prod2::telemetry::{get_subscriber, init_subscriber};
@@ -12,9 +13,7 @@ async fn main() -> Result<(), std::io::Error> {
 
     //-------------- Setup database
     let configuration = get_configuration().expect("Failed to read configuration.");
-    let connection =
-        PgPool::connect_lazy(&configuration.database.connection_string().expose_secret())
-            .expect("failed to connect to postgres");
+    let connection = PgPoolOptions::new().connect_lazy_with(configuration.database.with_db());
 
     //-------------- Setup TCPListener
     let address = format!(
