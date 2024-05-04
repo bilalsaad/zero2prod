@@ -3,6 +3,7 @@ use sqlx::{Connection, Executor, PgConnection, PgPool};
 use std::net::TcpListener;
 use uuid::Uuid;
 use zero2prod2::configuration::get_configuration;
+use zero2prod2::email_client::EmailClient;
 use zero2prod2::telemetry::{get_subscriber, init_subscriber};
 
 pub struct TestApp {
@@ -65,8 +66,15 @@ pub async fn spawn_app() -> TestApp {
         connection_pool
     };
 
-    let server =
-        zero2prod2::startup::run(listener, db_pool.clone()).expect("failed to bind address");
+    // Build Email client
+    let sender_email = configuration
+        .email_client
+        .sender()
+        .expect("invaliud sender email address");
+    let email_client = EmailClient::new(configuration.email_client.base_url, sender_email);
+
+    let server = zero2prod2::startup::run(listener, db_pool.clone(), email_client)
+        .expect("failed to bind address");
     let _ = tokio::spawn(server);
 
     TestApp { address, db_pool }

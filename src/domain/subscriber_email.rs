@@ -4,7 +4,7 @@
 ///  - Name is non empty
 ///  - Name is < 256 graphemes
 ///  - Name has no forbidden characters: '/()"<>\{}
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SubscriberEmail(String);
 
 impl SubscriberEmail {
