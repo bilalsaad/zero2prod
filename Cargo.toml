@@ -33,6 +33,7 @@ tracing-actix-web = "0.7.10"
 serde-aux = "4.5.0"
 unicode-segmentation = "1.11.0"
 claims = "0.7.1"
+validator = "0.16"
 
 
 [dependencies.sqlx]
