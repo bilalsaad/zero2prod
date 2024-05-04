@@ -2,6 +2,8 @@
 use secrecy::{ExposeSecret, Secret};
 use serde_aux::field_attributes::deserialize_number_from_string;
 use sqlx::postgres::PgConnectOptions;
+use sqlx::postgres::PgSslMode;
+use sqlx::ConnectOptions;
 
 #[derive(serde::Deserialize)]
 pub struct Settings {
@@ -17,6 +19,8 @@ pub struct DatabaseSettings {
     pub port: u16,
     pub host: String,
     pub database_name: String,
+    // Determine if we use an encrypted connection or not.
+    pub require_ssl: bool,
 }
 
 #[derive(serde::Deserialize)]
@@ -40,6 +44,7 @@ impl DatabaseSettings {
     ///    port: 5432,
     ///    host: "localhost".into(),
     ///    database_name: "db".into(),
+    ///    require_ssl: true,
     ///   };
     ///
     ///  
@@ -52,15 +57,21 @@ impl DatabaseSettings {
     /// ```
     pub fn with_db(&self) -> PgConnectOptions {
         self.without_db().database(&self.database_name)
+            .log_statements(tracing_log::log::LevelFilter::Trace)
     }
 
     /// Creates a db connection string but omits the database name.
     pub fn without_db(&self) -> PgConnectOptions {
+        let ssl_mode = match self.require_ssl {
+            true => PgSslMode::Require,
+            false => PgSslMode::Prefer
+        };
         PgConnectOptions::new()
             .host(&self.host)
             .username(&self.username)
             .password(&self.password.expose_secret())
             .port(self.port)
+            .ssl_mode(ssl_mode)
     }
 }
 

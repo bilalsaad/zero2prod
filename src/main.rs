@@ -1,6 +1,4 @@
-use secrecy::ExposeSecret;
 use sqlx::postgres::PgPoolOptions;
-use sqlx::PgPool;
 use std::net::TcpListener;
 use zero2prod2::telemetry::{get_subscriber, init_subscriber};
 use zero2prod2::{configuration::get_configuration, startup::run};
