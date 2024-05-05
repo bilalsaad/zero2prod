@@ -1,6 +1,7 @@
 use once_cell::sync::Lazy;
 use sqlx::{Connection, Executor, PgConnection, PgPool};
 use uuid::Uuid;
+use wiremock::MockServer;
 use zero2prod2::configuration::get_configuration;
 use zero2prod2::startup::{get_connection_pool, Application};
 use zero2prod2::telemetry::{get_subscriber, init_subscriber};
@@ -10,6 +11,8 @@ pub struct TestApp {
     pub address: String,
     /// The applications underlying DB.
     pub db_pool: PgPool,
+    /// Mock email client
+    pub email_server: MockServer,
 }
 
 impl TestApp {
@@ -40,6 +43,9 @@ static TRACING: Lazy<()> = Lazy::new(|| {
 pub async fn spawn_app() -> TestApp {
     Lazy::force(&TRACING);
 
+    // Launch a fake email server to stand in for SendGrid.
+    let email_server = MockServer::start().await;
+
     // Create a fresh DB for this test run.
     let configuration = {
         let mut configuration = get_configuration().expect("failed to get configuration");
@@ -47,6 +53,8 @@ pub async fn spawn_app() -> TestApp {
         configuration.database.database_name = Uuid::new_v4().to_string();
         // Use a random OS port.
         configuration.application.port = 0;
+        // Use fake mail server
+        configuration.email_client.base_url = email_server.uri();
         configuration
     };
 
@@ -83,5 +91,6 @@ pub async fn spawn_app() -> TestApp {
     TestApp {
         address,
         db_pool: get_connection_pool(&configuration.database),
+        email_server,
     }
 }

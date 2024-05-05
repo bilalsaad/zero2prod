@@ -59,6 +59,7 @@ pub fn get_connection_pool(configuration: &DatabaseSettings) -> PgPool {
 /// Returns an HTTP server on that listens  run on the given listener
 ///  Currently supported routes
 ///   - /health_check -> returns OK and an empty body.
+///   - /subscriptions -> add a new subscriber to newsletter.
 pub fn run(
     listener: TcpListener,
     db_pool: PgPool,
@@ -66,6 +67,7 @@ pub fn run(
 ) -> Result<Server, std::io::Error> {
     // Wrap the pool using Web::Data which boils down to an Arc smart pointer.
     let db_pool = web::Data::new(db_pool);
+    let email_client = web::Data::new(email_client);
     // Capture `connection` from the surrounding environment
     let server = HttpServer::new(move || {
         App::new()

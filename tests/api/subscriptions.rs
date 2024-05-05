@@ -1,9 +1,39 @@
+use claims::assert_gt;
+use wiremock::{
+    matchers::{method, path},
+    Mock, ResponseTemplate,
+};
+
 use crate::spawn_app::spawn_app;
 
 #[tokio::test]
 async fn subscribe_returns_a_200_for_a_valid_form_data() {
     // Arrange
     let app = spawn_app().await;
+    Mock::given(path("/v3/mail/send"))
+        .and(method("POST"))
+        .respond_with(ResponseTemplate::new(200))
+        .mount(&app.email_server)
+        .await;
+
+    // Act
+    let body = "name=stanley%20the%20third&email=stan%40gmail.com";
+    let response = app.post_subscriptions(body.into()).await;
+
+    // Assert
+    assert_eq!(response.status().as_u16(), 200);
+}
+
+#[tokio::test]
+async fn subscribe_persists_new_subscriber() {
+    // Arrange
+    let app = spawn_app().await;
+
+    Mock::given(path("/v3/mail/send"))
+        .and(method("POST"))
+        .respond_with(ResponseTemplate::new(200))
+        .mount(&app.email_server)
+        .await;
 
     // Act
     let body = "name=stanley%20the%20third&email=stan%40gmail.com";
@@ -12,13 +42,14 @@ async fn subscribe_returns_a_200_for_a_valid_form_data() {
     // Assert
     assert_eq!(response.status().as_u16(), 200);
 
-    let saved = sqlx::query!("SELECT email, name from subscriptions")
+    let saved = sqlx::query!("SELECT email, name, status from subscriptions")
         .fetch_one(&app.db_pool)
         .await
         .expect("Failed to fetch saved subscription.");
 
     assert_eq!(saved.email, "stan@gmail.com");
     assert_eq!(saved.name, "stanley the third");
+    assert_eq!(saved.status, "pending_confirmation");
 }
 
 #[tokio::test]
@@ -69,4 +100,59 @@ async fn subscribe_returns_a_400_when_fields_are_present_but_empty() {
             description
         );
     }
+}
+
+#[tokio::test]
+async fn subscribe_sends_a_confirmation_email_for_valid_data() {
+    // Arrange
+    let app = spawn_app().await;
+    let body = "name=stanley%20the%20human&email=stan%40ley.com";
+
+    Mock::given(path("/v3/mail/send"))
+        .and(method("POST"))
+        .respond_with(ResponseTemplate::new(200))
+        .expect(1)
+        .mount(&app.email_server)
+        .await;
+
+    // Act
+    app.post_subscriptions(body.into()).await;
+
+    // Assert
+    // mock asserts on drop.
+}
+
+#[tokio::test]
+async fn subscribe_sends_a_confirmation_email_with_a_link() {
+    // Arrange
+    let app = spawn_app().await;
+    let body = "name=stanley%20the%20human&email=stan%40ley.com";
+
+    Mock::given(path("/v3/mail/send"))
+        .and(method("POST"))
+        .respond_with(ResponseTemplate::new(200))
+        .mount(&app.email_server)
+        .await;
+
+    // Act
+    app.post_subscriptions(body.into()).await;
+
+    // Assert
+    // mock asserts on drop.
+    let email_request = &app.email_server.received_requests().await.unwrap()[0];
+    let body: serde_json::Value = serde_json::from_slice(&email_request.body).unwrap();
+
+    // Extract the link from one of the request fields.
+    let get_link = |s: &str| {
+        let links: Vec<_> = linkify::LinkFinder::new()
+            .links(s)
+            .filter(|l| *l.kind() == linkify::LinkKind::Url)
+            .collect();
+        assert_gt!(links.len(), 0);
+        links[0].as_str().to_owned()
+    };
+
+    let html_link = get_link(&body["content"][0]["value"].as_str().unwrap());
+    let text_link = get_link(&body["content"][1]["value"].as_str().unwrap());
+    assert_eq!(html_link, text_link);
 }
