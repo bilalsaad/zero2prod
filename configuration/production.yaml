@@ -4,4 +4,4 @@ database:
   require_ssl: true
 email_client:
   base_url: "https://api.sendgrid.com/v3/mail/send"
-  sender: "tunica.twitch_09@icloud.com"
+  sender_email: "tunica.twitch_09@icloud.com"
