@@ -63,15 +63,15 @@ pub async fn subscribe(
         return HttpResponse::InternalServerError().finish();
     }
 
-    if send_confirmation_email(
+    if let Err(e) = send_confirmation_email(
         &email_client,
         new_subscriber,
         &base_url.0,
         &subscription_token,
     )
     .await
-    .is_err()
     {
+        tracing::error!("Failed to email  query: {:?}", e);
         return HttpResponse::InternalServerError().finish();
     }
 

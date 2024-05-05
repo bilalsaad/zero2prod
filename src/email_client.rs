@@ -27,6 +27,7 @@ impl EmailClient {
 }
 
 impl EmailClient {
+    #[tracing::instrument("Send email from client")]
     pub async fn send_email(
         &self,
         recipient: SubscriberEmail,
@@ -66,8 +67,20 @@ impl EmailClient {
             )
             .json(&request_body)
             .send()
-            .await?
-            .error_for_status()?;
+            .await
+            .map(|e| {
+                tracing::error!("failed to send email, email svc: {:?} {:?}", url, e);
+                e
+            })?
+            .error_for_status()
+            .map(|e| {
+                tracing::error!(
+                    "application error from email svc, email svc: {:?} {:?}",
+                    url,
+                    e
+                );
+                e
+            })?;
         Ok(())
     }
 }
