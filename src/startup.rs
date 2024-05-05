@@ -8,8 +8,8 @@ use tracing_actix_web::TracingLogger;
 
 use crate::configuration::{DatabaseSettings, Settings};
 use crate::email_client::EmailClient;
-use crate::routes::{confirm, health_check};
 use crate::routes::subscribe;
+use crate::routes::{confirm, health_check};
 
 pub struct Application {
     port: u16,
@@ -43,7 +43,7 @@ impl Application {
             connection_pool,
             email_client,
             configuration.application.base_url,
-            )?;
+        )?;
 
         Ok(Self { port, server })
     }

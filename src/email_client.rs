@@ -49,12 +49,12 @@ impl EmailClient {
             subject: subject.to_string(),
             content: vec![
                 Content {
-                    type_field: "text/plain".to_string(),
-                    value: text_content.to_string(),
+                    type_field: "text/html".to_string(),
+                    value: html_content.to_string(),
                 },
                 Content {
                     type_field: "text/plain".to_string(),
-                    value: html_content.to_string(),
+                    value: text_content.to_string(),
                 },
             ],
         };

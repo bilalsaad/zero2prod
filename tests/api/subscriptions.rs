@@ -140,19 +140,7 @@ async fn subscribe_sends_a_confirmation_email_with_a_link() {
     // Assert
     // mock asserts on drop.
     let email_request = &app.email_server.received_requests().await.unwrap()[0];
-    let body: serde_json::Value = serde_json::from_slice(&email_request.body).unwrap();
 
-    // Extract the link from one of the request fields.
-    let get_link = |s: &str| {
-        let links: Vec<_> = linkify::LinkFinder::new()
-            .links(s)
-            .filter(|l| *l.kind() == linkify::LinkKind::Url)
-            .collect();
-        assert_gt!(links.len(), 0);
-        links[0].as_str().to_owned()
-    };
-
-    let html_link = get_link(&body["content"][0]["value"].as_str().unwrap());
-    let text_link = get_link(&body["content"][1]["value"].as_str().unwrap());
-    assert_eq!(html_link, text_link);
+    let links = app.get_confirmation_links(email_request);
+    assert_eq!(links.html, links.plain_text);
 }
