@@ -46,6 +46,7 @@ serde-aux = "4.5.0"
 unicode-segmentation = "1.11.0"
 claims = "0.7.1"
 validator = "0.16"
+rand = { version = "0.8.5", features = ["std_rng"] }
 
 
 [dependencies.sqlx]
