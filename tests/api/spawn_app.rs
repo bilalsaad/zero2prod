@@ -13,6 +13,8 @@ pub struct TestApp {
     pub db_pool: PgPool,
     /// Mock email client
     pub email_server: MockServer,
+    /// Application port
+    pub port: u16,
 }
 
 impl TestApp {
@@ -85,12 +87,14 @@ pub async fn spawn_app() -> TestApp {
     let application = Application::build(configuration.clone())
         .await
         .expect("failed to build application.");
-    let address = format!("http://localhost:{}", application.port());
+    let application_port = application.port();
+    let address = format!("http://localhost:{}", application_port);
     let _ = tokio::spawn(application.run_until_stopped());
 
     TestApp {
         address,
         db_pool: get_connection_pool(&configuration.database),
         email_server,
+        port: application_port,
     }
 }
