@@ -1,7 +1,7 @@
 use actix_web::http::StatusCode;
-use anyhow::Context;
 /// /subscriptions handlers.
 use actix_web::{web, HttpResponse, ResponseError};
+use anyhow::Context;
 use chrono::Utc;
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
@@ -40,8 +40,10 @@ pub async fn subscribe(
 ) -> Result<HttpResponse, SubscribeError> {
     let new_subscriber = form.0.try_into().map_err(SubscribeError::ValidationError)?;
 
-    let mut transaction = db_pool.begin().await.
-        context("Failed to acquire a new Postgres connection from the pool")?;
+    let mut transaction = db_pool
+        .begin()
+        .await
+        .context("Failed to acquire a new Postgres connection from the pool")?;
 
     let subscriber_id = insert_subscriber(&mut transaction, &new_subscriber)
         .await
@@ -52,8 +54,10 @@ pub async fn subscribe(
         .await
         .context("Failed to store the confirmation token for a new subscriber.")?;
 
-    transaction.commit().await.context("failed to commit sql transaction to add new subscriber.")?;
-
+    transaction
+        .commit()
+        .await
+        .context("failed to commit sql transaction to add new subscriber.")?;
 
     send_confirmation_email(
         &email_client,
@@ -104,9 +108,10 @@ async fn store_token(
         subscription_token,
         subscriber_id
     );
-    transaction.execute(query).await.map_err(|e| {
-        StoreTokenError(e)
-    })?;
+    transaction
+        .execute(query)
+        .await
+        .map_err(|e| StoreTokenError(e))?;
     Ok(())
 }
 
