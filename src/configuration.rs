@@ -12,6 +12,8 @@ pub struct Settings {
     pub database: DatabaseSettings,
     pub application: ApplicationSettings,
     pub email_client: EmailClientSettings,
+    // May embed a password so much be secret.
+    pub redis_uri: Secret<String>,
 }
 
 #[derive(serde::Deserialize, Clone, Debug)]
