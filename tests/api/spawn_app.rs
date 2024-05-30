@@ -80,11 +80,7 @@ impl TestApp {
 
     /// Fetches the /admin/dashboard html.
     pub async fn get_admin_dashboard_html(&self) -> String {
-        self.get_admin_dashboard()
-            .await
-            .text()
-            .await
-            .unwrap()
+        self.get_admin_dashboard().await.text().await.unwrap()
     }
 
     /// Fetches the /admin/dashboard page.
