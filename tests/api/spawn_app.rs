@@ -55,8 +55,8 @@ pub struct TestApp {
     pub port: u16,
     /// API client. used to send all requests to `address`.
     pub api_client: reqwest::Client,
-
-    test_user: TestUser,
+    /// User in DB.
+    pub test_user: TestUser,
 }
 
 /// Confirmation links embedded inthe email API.
@@ -76,6 +76,24 @@ impl TestApp {
             .text()
             .await
             .unwrap()
+    }
+
+    /// Fetches the /admin/dashboard html.
+    pub async fn get_admin_dashboard_html(&self) -> String {
+        self.get_admin_dashboard()
+            .await
+            .text()
+            .await
+            .unwrap()
+    }
+
+    /// Fetches the /admin/dashboard page.
+    pub async fn get_admin_dashboard(&self) -> reqwest::Response {
+        self.api_client
+            .get(&format!("{}/admin/dashboard", &self.address))
+            .send()
+            .await
+            .expect("Failed to get admin dashboard.")
     }
 
     /// Sends a POST /subscriptions with the given body.
