@@ -119,7 +119,7 @@ impl TestApp {
             .expect("Failed to post request.")
     }
 
-    /// Sends a POST /subscriptions with the given body.
+    /// Sends a POST /login with the given body.
     pub async fn post_login<Body>(&self, body: &Body) -> reqwest::Response
     where
         Body: serde::Serialize,
@@ -130,6 +130,15 @@ impl TestApp {
             .send()
             .await
             .expect("Failed to login post request.")
+    }
+
+    /// Sends a POST /admin/logout.
+    pub async fn post_logout(&self) -> reqwest::Response {
+        self.api_client
+            .post(&format!("{}/admin/login", &self.address))
+            .send()
+            .await
+            .expect("Failed to logout post request.")
     }
 
     /// Sends a POST /subscriptions with the given body.
