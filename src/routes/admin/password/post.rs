@@ -26,7 +26,7 @@ async fn reject_anonymous_users(session: TypedSession) -> Result<uuid::Uuid, act
         None => {
             let response = see_other("/login");
             let e = anyhow::anyhow!("The user has not logged in");
-            Err(actix_web::error::InternalError::from_response(e, response).into())
+            Err(InternalError::from_response(e, response).into())
         }
     }
 }
