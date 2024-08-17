@@ -17,7 +17,7 @@ use crate::configuration::{DatabaseSettings, Settings};
 use crate::email_client::EmailClient;
 use crate::routes::{
     admin_dashboard, change_password, change_password_form, confirm, health_check, home, log_out,
-    login, login_form,
+    login, login_form, newsletter_form,
 };
 use crate::routes::{publish_newsletter, subscribe};
 
@@ -121,6 +121,8 @@ pub async fn run(
                     .route("/dashboard", web::get().to(admin_dashboard))
                     .route("/password", web::get().to(change_password_form))
                     .route("/password", web::post().to(change_password))
+                    .route("/newsletter", web::get().to(newsletter_form))
+                    // .route("/newsletter", web::post().to(post_newsletter))
                     .route("/logout", web::post().to(log_out)),
             )
             .route("/login", web::get().to(login_form))

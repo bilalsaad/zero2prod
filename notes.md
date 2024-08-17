@@ -1,4 +1,7 @@
 
+# August 17
+ - Write tests for admin/newsletter handlers.
+
 # Random notes
 
 - Make sure you run `ulimit -n 10240` to not run into issues with too many open files.
