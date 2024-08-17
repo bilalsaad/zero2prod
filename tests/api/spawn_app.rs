@@ -135,7 +135,7 @@ impl TestApp {
     /// Sends a POST /admin/logout.
     pub async fn post_logout(&self) -> reqwest::Response {
         self.api_client
-            .post(&format!("{}/admin/login", &self.address))
+            .post(&format!("{}/admin/logout", &self.address))
             .send()
             .await
             .expect("Failed to logout post request.")
