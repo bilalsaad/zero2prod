@@ -15,5 +15,4 @@
 
 From chrome -- access localhost:8000/login and it has the password saved
 
-original password was "everythinghastostartsomewhere"
-
+last password was localhost8000 in test setup locally
