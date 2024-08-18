@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 // e2e test for newsletter.
 use wiremock::{
     matchers::{any, method, path},
@@ -6,6 +8,14 @@ use wiremock::{
 
 use crate::spawn_app::{assert_is_redirect_to, spawn_app, ConfirmationLinks, TestApp};
 
+async fn create_confirmed_subscriber(app: &TestApp) {
+    let confirmation_link = create_unconfirmed_subscriber(app).await;
+    reqwest::get(confirmation_link.html)
+        .await
+        .unwrap()
+        .error_for_status()
+        .unwrap();
+}
 #[tokio::test]
 async fn newsletters_are_not_delivered_to_unconfirmed_subscribers() {
     // Arrange
@@ -212,11 +222,43 @@ async fn newsletter_creation_is_idempotent() {
     // Mock verifies on Drop that we have sent the email one.
 }
 
-async fn create_confirmed_subscriber(app: &TestApp) {
-    let confirmation_link = create_unconfirmed_subscriber(app).await;
-    reqwest::get(confirmation_link.html)
-        .await
-        .unwrap()
-        .error_for_status()
-        .unwrap();
+#[tokio::test]
+async fn concurrent_form_submission_is_handled_ok() {
+    // arrange
+    let app = spawn_app().await;
+    create_confirmed_subscriber(&app).await;
+    app.post_login(&serde_json::json!({
+        "username": &app.test_user.username,
+        "password": &app.test_user.password,
+    }))
+    .await;
+
+    // The first email request will have long delay.
+    Mock::given(path("/v3/mail/send"))
+        .and(method("POST"))
+        .respond_with(ResponseTemplate::new(200).set_delay(Duration::from_secs(2)))
+        .expect(1)
+        .mount(&app.email_server)
+        .await;
+
+    // Act - Submit two newsletter forms concurrently
+    // Submit newsletter
+    let request_body = serde_json::json!({
+        "title": "Newsletter title",
+        "text_content": "Newsletter body as plain text",
+        "html_content": "<p>Newsletter body as HTML</p>",
+        // We expect the idempotency key as part of the
+        // form data, not as an header
+        "idempotency_key": uuid::Uuid::new_v4().to_string()
+    });
+    let response1 = app.post_newsletters(&request_body);
+    let response2 = app.post_newsletters(&request_body);
+    let (response1, response2) = tokio::join!(response1, response2);
+
+    assert_eq!(response1.status(), response2.status());
+    assert_eq!(
+        response1.text().await.unwrap(),
+        response2.text().await.unwrap()
+    )
+    // Mock verifies on Drop that we have sent the email one.
 }
