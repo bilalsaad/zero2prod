@@ -4,6 +4,6 @@ application:
 database:
   require_ssl: false
 email_client:
-  base_url: "localhost"
+  base_url: "http://127.0.0.1:7001"
   sender_email: "test@gmail.com"
   authorization_token: "my-secrte-token"
