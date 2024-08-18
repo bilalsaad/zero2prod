@@ -156,8 +156,7 @@ impl TestApp {
     pub async fn post_newsletters(&self, body: &serde_json::Value) -> reqwest::Response {
         self.api_client
             .post(&format!("{}/admin/newsletter", &self.address))
-            .basic_auth(&self.test_user.username, Some(&self.test_user.password))
-            .json(&body)
+            .form(&body)
             .send()
             .await
             .expect("Failed to execute request.")

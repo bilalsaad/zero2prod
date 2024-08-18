@@ -29,10 +29,8 @@ async fn newsletters_are_not_delivered_to_unconfirmed_subscribers() {
 
     let newsletter_request_body = serde_json::json!({
         "title": "Newsletter title",
-        "content" : {
-            "text": "Newsletter body as plain_text",
-            "html": "<p>Newsletter body as HTML</p>",
-        }
+        "text_content": "Newsletter body as plain_text",
+        "html_content": "<p>Newsletter body as HTML</p>",
     });
     let response = app.post_newsletters(&newsletter_request_body).await;
 
@@ -63,10 +61,8 @@ async fn newsletters_are_delivered_to_confirmed_subscribers() {
 
     let newsletter_request_body = serde_json::json!({
         "title": "newsletter title",
-        "content" : {
-            "text": "newsletter body as plain_text",
-            "html": "<p>newsletter body as html</p>",
-        }
+        "text_content": "newsletter body as plain_text",
+        "html_content": "<p>newsletter body as html</p>",
     });
     let response = app.post_newsletters(&newsletter_request_body).await;
 

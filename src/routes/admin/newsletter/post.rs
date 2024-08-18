@@ -14,24 +14,19 @@ use anyhow::Context;
 use sqlx::PgPool;
 
 #[derive(serde::Deserialize)]
-pub struct BodyData {
+pub struct FormData {
     title: String,
-    content: Content,
-}
-
-#[derive(serde::Deserialize)]
-pub struct Content {
-    html: String,
-    text: String,
+    text_content: String,
+    html_content: String,
 }
 
 /// Publishes a newletter to all confirmed subscribers.
 #[tracing::instrument(
     name="Publish a newsletter issue",
-    skip(body, pool, email_client),
+    skip(form, pool, email_client),
     fields(username=tracing::field::Empty, user_id=tracing::field::Empty))]
 pub async fn publish_newsletter(
-    body: web::Json<BodyData>,
+    form: web::Form<FormData>,
     pool: web::Data<PgPool>,
     email_client: web::Data<EmailClient>,
     user_id: web::ReqData<UserId>,
@@ -44,9 +39,9 @@ pub async fn publish_newsletter(
                 email_client
                     .send_email(
                         &subscriber.email,
-                        &body.title,
-                        &body.content.html,
-                        &body.content.text,
+                        &form.title,
+                        &form.html_content,
+                        &form.text_content,
                     )
                     .await
                     .with_context(|| {
