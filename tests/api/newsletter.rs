@@ -31,6 +31,7 @@ async fn newsletters_are_not_delivered_to_unconfirmed_subscribers() {
         "title": "Newsletter title",
         "text_content": "Newsletter body as plain_text",
         "html_content": "<p>Newsletter body as HTML</p>",
+        "idempotency_key": uuid::Uuid::new_v4().to_string()
     });
     let response = app.post_newsletters(&newsletter_request_body).await;
 
@@ -63,8 +64,10 @@ async fn newsletters_are_delivered_to_confirmed_subscribers() {
         "title": "newsletter title",
         "text_content": "newsletter body as plain_text",
         "html_content": "<p>newsletter body as html</p>",
+        "idempotency_key": uuid::Uuid::new_v4().to_string()
     });
     let response = app.post_newsletters(&newsletter_request_body).await;
+    dbg!(&response);
 
     // assert
     assert_is_redirect_to(&response, "/admin/newsletter")
@@ -84,15 +87,26 @@ async fn newsletters_returns_400_for_invalid_data() {
     let test_cases = vec![
         (
             serde_json::json!({
-                "text_content": "text", "html_content": "html"
+                "text_content": "text", "html_content": "html",
+                "idempotency_key": uuid::Uuid::new_v4().to_string()
+
             }),
             "missing_title",
         ),
         (
             serde_json::json!({
-                "title": "title"
+                "title": "title",
+                "idempotency_key": uuid::Uuid::new_v4().to_string()
             }),
             "missing_content",
+        ),
+        (
+            serde_json::json!({
+                "title": "title",
+                "text_content": "t",
+                "html_content": "tt",
+            }),
+            "missing_idempotency_ley",
         ),
     ];
 
@@ -143,6 +157,8 @@ async fn post_newsletters_redirects_to_login_if_not_logged_in() {
         "title": "newsletter title",
         "text_content": "newsletter body as plain_text",
         "html_content": "<p>newsletter body as html</p>",
+        "idempotency_key": uuid::Uuid::new_v4().to_string()
+
     });
 
     let response = app.post_newsletters(&request_body).await;
