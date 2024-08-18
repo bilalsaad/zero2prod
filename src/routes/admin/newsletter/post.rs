@@ -20,6 +20,8 @@ pub struct FormData {
     title: String,
     text_content: String,
     html_content: String,
+    // Used avoid replaying requests.
+    idemoptency_key: String,
 }
 
 /// Publishes a newletter to all confirmed subscribers.
