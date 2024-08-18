@@ -122,6 +122,7 @@ pub async fn run(
                     .route("/password", web::get().to(change_password_form))
                     .route("/password", web::post().to(change_password))
                     .route("/newsletter", web::get().to(newsletter_form))
+                    .route("/newsletter", web::post().to(publish_newsletter))
                     // .route("/newsletter", web::post().to(post_newsletter))
                     .route("/logout", web::post().to(log_out)),
             )
@@ -130,7 +131,6 @@ pub async fn run(
             .route("/health_check", web::get().to(health_check))
             .route("/subscriptions", web::post().to(subscribe))
             .route("/subscriptions/confirm", web::get().to(confirm))
-            .route("/newsletters", web::post().to(publish_newsletter))
             // Get a pointer copy and attach it to the application state
             .app_data(db_pool.clone())
             .app_data(email_client.clone())
