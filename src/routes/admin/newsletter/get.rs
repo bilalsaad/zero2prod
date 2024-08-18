@@ -1,51 +1,59 @@
 // Handler that returns a form to publish a new newsletter.
-
 use actix_web::http::header::ContentType;
 use actix_web::HttpResponse;
+use actix_web_flash_messages::IncomingFlashMessages;
+use std::fmt::Write;
 
-use crate::session_state::TypedSession;
-use crate::utils::{e500, see_other};
-
-/// Returns an HTML page with a form to submit a new issue of a newsletter.
-///
-/// REQUIRES:
-///  - valid user session
-pub async fn newsletter_form(session: TypedSession) -> Result<HttpResponse, actix_web::Error> {
-    if session.get_user_id().map_err(e500)?.is_none() {
-        return Ok(see_other("/login"));
+pub async fn newsletter_form(
+    flash_messages: IncomingFlashMessages,
+) -> Result<HttpResponse, actix_web::Error> {
+    let mut msg_html = String::new();
+    for m in flash_messages.iter() {
+        writeln!(msg_html, "<p><i>{}</i></p>", m.content()).unwrap();
     }
 
-    Ok(HttpResponse::Ok().content_type(ContentType::html()).body(
-        r#"<!DOCTYPE html>
+    Ok(HttpResponse::Ok()
+        .content_type(ContentType::html())
+        .body(format!(
+            r#"<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta http-equiv="content-type" content="text/html; charset=utf-8">
-    <title>Change Password</title>
+    <title>Publish Newsletter Issue</title>
 </head>
 <body>
- {msg_html}
-<form action="/admin/newsletter" method="post">
-        <label>Title
+    {msg_html}
+    <form action="/admin/newsletters" method="post">
+        <label>Title:<br>
             <input
                 type="text"
-                placeholder="Untitled"
+                placeholder="Enter the issue title"
                 name="title"
             >
         </label>
         <br>
-        <label>Content
-            <input
-                type="text"
-                placeholder="Content..."
-                name="content"
-            >
+        <label>Plain text content:<br>
+            <textarea
+                placeholder="Enter the content in plain text"
+                name="text_content"
+                rows="20"
+                cols="50"
+            ></textarea>
         </label>
         <br>
+        <label>HTML content:<br>
+            <textarea
+                placeholder="Enter the content in HTML format"
+                name="html_content"
+                rows="20"
+                cols="50"
+            ></textarea>
+        </label>
         <br>
-        <button type="submit">Change password</button>
+        <button type="submit">Publish</button>
     </form>
     <p><a href="/admin/dashboard">&lt;- Back</a></p>
 </body>
 </html>"#,
-    ))
+        )))
 }
