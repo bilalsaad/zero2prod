@@ -35,7 +35,7 @@ async fn newsletters_are_not_delivered_to_unconfirmed_subscribers() {
     let response = app.post_newsletters(&newsletter_request_body).await;
 
     // Assert
-    assert_eq!(response.status().as_u16(), 200);
+    assert_is_redirect_to(&response, "/admin/newsletter")
     // Mock verifies on drop.
 }
 
@@ -67,7 +67,7 @@ async fn newsletters_are_delivered_to_confirmed_subscribers() {
     let response = app.post_newsletters(&newsletter_request_body).await;
 
     // assert
-    assert_eq!(response.status().as_u16(), 200);
+    assert_is_redirect_to(&response, "/admin/newsletter")
     // mock verifies on drop.
 }
 
@@ -84,7 +84,7 @@ async fn newsletters_returns_400_for_invalid_data() {
     let test_cases = vec![
         (
             serde_json::json!({
-                "content": { "text": "text", "html": "html" }
+                "text_content": "text", "html_content": "html"
             }),
             "missing_title",
         ),
@@ -141,10 +141,8 @@ async fn post_newsletters_redirects_to_login_if_not_logged_in() {
 
     let request_body = serde_json::json!({
         "title": "newsletter title",
-        "content" : {
-            "text": "newsletter body as plain_text",
-            "html": "<p>newsletter body as html</p>",
-        }
+        "text_content": "newsletter body as plain_text",
+        "html_content": "<p>newsletter body as html</p>",
     });
 
     let response = app.post_newsletters(&request_body).await;
