@@ -20,6 +20,7 @@ quickcheck_macros = "0.9.1"
 tokio = { version = "1", features = ["rt", "macros"] }
 wiremock = "0.6.0"
 linkify = "0.10.0"
+serde_urlencoded = "0.7.1"
 
 
 [dependencies.reqwest]
