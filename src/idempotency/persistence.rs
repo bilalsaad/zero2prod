@@ -1,11 +1,12 @@
 use super::IdempotencyKey;
 use actix_web::{body::to_bytes, http::StatusCode, HttpResponse};
-use sqlx::{postgres::PgHasArrayType, PgPool};
+use sqlx::Executor;
+use sqlx::{postgres::PgHasArrayType, PgPool, Postgres, Transaction};
 use uuid::Uuid;
 
 /// Returns the cached response for <user_id, idempotency_key> if it exsists.
 /// databases errors are propagated.
-pub async fn get_saved_response(
+async fn get_saved_response(
     pool: &PgPool,
     idempotency_key: &IdempotencyKey,
     user_id: Uuid,
@@ -13,8 +14,8 @@ pub async fn get_saved_response(
     let saved_response = sqlx::query!(
         r#"
         SELECT 
-            response_status_code,
-            response_headers as "response_headers: Vec<HeaderPairRecord>",
+            response_status_code as "response_status_code!",
+            response_headers as "response_headers!: Vec<HeaderPairRecord>",
             response_body as "response_body!"
         FROM idempotency
         WHERE
@@ -55,7 +56,7 @@ impl PgHasArrayType for HeaderPairRecord {
 
 /// Saves a reply protection response for <user_id, idempotency_key> in DB.
 pub async fn save_response(
-    pool: &PgPool,
+    mut transaction: Transaction<'static, Postgres>,
     idempotency_key: &IdempotencyKey,
     user_id: Uuid,
     http_response: HttpResponse,
@@ -74,29 +75,73 @@ pub async fn save_response(
         h
     };
 
-    // Use an unchecked query because sqlx doesn't know about the custom type
-    // for the response headers.
-    sqlx::query_unchecked!(
+    transaction
+        .execute(
+            // Use an unchecked query because sqlx doesn't know about the custom type
+            // for the response headers.
+            sqlx::query_unchecked!(
+                r#"
+            UPDATE idempotency
+            SET 
+                response_status_code = $3,
+                response_headers = $4,
+                response_body = $5
+            WHERE
+                user_id = $1 AND
+                idempotency_key = $2
+        "#,
+                user_id,
+                idempotency_key.as_ref(),
+                status_code,
+                headers,
+                body.as_ref()
+            ),
+        )
+        .await?;
+    transaction.commit().await?;
+
+    let http_response = response_head.set_body(body).map_into_boxed_body();
+    Ok(http_response)
+}
+
+/// try_processing return - tells the caller what to do next for replay protection.
+pub enum NextAction {
+    // There wasn't a hit in the replay table.
+    // Return a transaction for later usage.
+    StartProcessing(Transaction<'static, Postgres>),
+    // There was a hit in the replay table.
+    ReturnSavedResponse(HttpResponse),
+}
+
+pub async fn try_processing(
+    pool: &PgPool,
+    idempotency_key: &IdempotencyKey,
+    user_id: Uuid,
+) -> Result<NextAction, anyhow::Error> {
+    let mut transaction = pool.begin().await?;
+    let query = sqlx::query!(
         r#"
             INSERT INTO idempotency (
                 user_id,
                 idempotency_key,
-                response_status_code,
-                response_headers,
-                response_body,
                 created_at
             )
-            VALUES($1, $2, $3, $4, $5, now())
+            VALUES($1, $2, now())
+            ON CONFLICT DO NOTHING
         "#,
         user_id,
-        idempotency_key.as_ref(),
-        status_code,
-        headers,
-        body.as_ref(),
-    )
-    .execute(pool)
-    .await?;
+        idempotency_key.as_ref()
+    );
+    // Try to insert the <user, key> tuple, if it one exists this will be 0.
+    let n_inserted_rows = transaction.execute(query).await?.rows_affected();
 
-    let http_response = response_head.set_body(body).map_into_boxed_body();
-    Ok(http_response)
+    if n_inserted_rows > 0 {
+        Ok(NextAction::StartProcessing(transaction))
+    } else {
+        // One exists, return the saved response..
+        let saved_response = get_saved_response(pool, idempotency_key, user_id)
+            .await?
+            .ok_or_else(|| anyhow::anyhow!("We expected a saved response, we didn't find it"))?;
+        Ok(NextAction::ReturnSavedResponse(saved_response))
+    }
 }
