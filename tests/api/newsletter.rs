@@ -50,7 +50,8 @@ async fn newsletters_are_not_delivered_to_unconfirmed_subscribers() {
     let response = app.post_newsletters(&newsletter_request_body).await;
 
     // Assert
-    assert_is_redirect_to(&response, "/admin/newsletter")
+    assert_is_redirect_to(&response, "/admin/newsletter");
+    app.dispatch_all_pending_emails().await;
     // Mock verifies on drop.
 }
 
@@ -84,7 +85,8 @@ async fn newsletters_are_delivered_to_confirmed_subscribers() {
     dbg!(&response);
 
     // assert
-    assert_is_redirect_to(&response, "/admin/newsletter")
+    assert_is_redirect_to(&response, "/admin/newsletter");
+    app.dispatch_all_pending_emails().await;
     // mock verifies on drop.
 }
 
@@ -230,6 +232,7 @@ async fn newsletter_creation_is_idempotent() {
     dbg!(&html_page);
     assert!(html_page.contains("The newsletter has been published!"));
 
+    app.dispatch_all_pending_emails().await;
     // Mock verifies on Drop that we have sent the email one.
 }
 
@@ -270,7 +273,10 @@ async fn concurrent_form_submission_is_handled_ok() {
     assert_eq!(
         response1.text().await.unwrap(),
         response2.text().await.unwrap()
-    )
+    );
+
+    app.dispatch_all_pending_emails().await;
+
     // Mock verifies on Drop that we have sent the email one.
 }
 
@@ -326,5 +332,7 @@ async fn transient_errors_do_not_cause_duplicate_deliveries_on_retries() {
         .await;
     let response = app.post_newsletters(&newsletter_request_body).await;
     assert_eq!(response.status().as_u16(), 303);
+
+    app.dispatch_all_pending_emails().await;
     // Mock verifies on drop...
 }

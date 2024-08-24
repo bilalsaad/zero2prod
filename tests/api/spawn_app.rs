@@ -6,6 +6,8 @@ use sqlx::{Connection, Executor, PgConnection, PgPool};
 use uuid::Uuid;
 use wiremock::MockServer;
 use zero2prod2::configuration::get_configuration;
+use zero2prod2::email_client::EmailClient;
+use zero2prod2::issue_delivery_worker::{try_execute_task, ExecutionOutcome};
 use zero2prod2::startup::{get_connection_pool, Application};
 use zero2prod2::telemetry::{get_subscriber, init_subscriber};
 
@@ -57,6 +59,8 @@ pub struct TestApp {
     pub api_client: reqwest::Client,
     /// User in DB.
     pub test_user: TestUser,
+    /// Email client used to send notifcations.
+    pub email_client: EmailClient,
 }
 
 /// Confirmation links embedded inthe email API.
@@ -66,6 +70,18 @@ pub struct ConfirmationLinks {
 }
 
 impl TestApp {
+    /// Drains all of the email send tasks.
+    pub async fn dispatch_all_pending_emails(&self) {
+        loop {
+            if let ExecutionOutcome::EmptyQueue =
+                try_execute_task(&self.db_pool, &self.email_client)
+                    .await
+                    .unwrap()
+            {
+                break;
+            }
+        }
+    }
     /// Fetches the /login html.
     pub async fn get_login_html(&self) -> String {
         self.api_client
@@ -276,6 +292,7 @@ pub async fn spawn_app() -> TestApp {
         port: application_port,
         api_client: client,
         test_user: TestUser::generate(),
+        email_client: configuration.email_client.client(),
     };
 
     test_app.test_user.store(&test_app.db_pool).await;

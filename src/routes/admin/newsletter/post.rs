@@ -53,11 +53,7 @@ pub async fn publish_newsletter(
         }
     };
 
-    let issue_id = insert_newsletter_issue(
-        &mut transaction,
-        &title,
-        &text_content, 
-        &html_content)
+    let issue_id = insert_newsletter_issue(&mut transaction, &title, &text_content, &html_content)
         .await
         .context("Failed to store newsletter issue details")
         .map_err(e500)?;
@@ -82,7 +78,6 @@ fn success_message() -> FlashMessage {
     )
 }
 
-
 #[derive(thiserror::Error)]
 pub enum PublishError {
     #[error(transparent)]
@@ -104,7 +99,6 @@ impl ResponseError for PublishError {
         }
     }
 }
-
 
 #[tracing::instrument(skip_all)]
 async fn insert_newsletter_issue(
